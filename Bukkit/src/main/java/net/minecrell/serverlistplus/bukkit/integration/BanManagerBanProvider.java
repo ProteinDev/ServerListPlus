@@ -40,10 +40,8 @@ public class BanManagerBanProvider implements BanProvider {
     public String getBanReason(PlayerIdentity playerIdentity) {
         final PlayerBanData ban = getBan(playerIdentity);
 
-        if (ban == null)
-            return null;
+        return ban == null ? null : ban.getReason();
 
-        return ban.getReason();
     }
 
     @Override

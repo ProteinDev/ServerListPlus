@@ -32,8 +32,6 @@ dependencies {
     compileOnly("net.md-5:bungeecord-api:1.13-SNAPSHOT")
 
     compileOnly("com.github.lucavinci:bungeeban:v2.7.0") { isTransitive = false }
-
-    compile("net.minecrell.mcstats:statslite-bungee:0.2.3")
 }
 
 bungee {
@@ -43,12 +41,3 @@ bungee {
     softDepends = setOf("AdvancedBan", "BungeeBan")
 }
 
-tasks {
-    getByName<ShadowJar>("shadowJar") {
-        dependencies {
-            include(dependency("net.minecrell.mcstats:statslite-bungee"))
-        }
-
-        relocate("net.minecrell.mcstats", "net.minecrell.serverlistplus.mcstats")
-    }
-}

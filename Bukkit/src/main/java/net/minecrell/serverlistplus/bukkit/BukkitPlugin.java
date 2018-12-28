@@ -18,16 +18,8 @@
 
 package net.minecrell.serverlistplus.bukkit;
 
-import static net.minecrell.serverlistplus.core.logging.Logger.DEBUG;
-import static net.minecrell.serverlistplus.core.logging.Logger.ERROR;
-import static net.minecrell.serverlistplus.core.logging.Logger.INFO;
-
 import com.google.common.base.Optional;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheBuilderSpec;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import com.google.common.cache.*;
 import net.minecrell.serverlistplus.bukkit.handlers.BukkitEventHandler;
 import net.minecrell.serverlistplus.bukkit.handlers.PaperEventHandler;
 import net.minecrell.serverlistplus.bukkit.handlers.ProtocolLibHandler;
@@ -49,7 +41,6 @@ import net.minecrell.serverlistplus.core.plugin.ServerListPlusPlugin;
 import net.minecrell.serverlistplus.core.plugin.ServerType;
 import net.minecrell.serverlistplus.core.status.StatusManager;
 import net.minecrell.serverlistplus.core.status.StatusRequest;
-import net.minecrell.serverlistplus.core.util.Helper;
 import net.minecrell.serverlistplus.core.util.Randoms;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
@@ -64,20 +55,16 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.util.CachedServerIcon;
-import org.mcstats.MetricsLite;
 
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Handler;
+
+import static net.minecrell.serverlistplus.core.logging.Logger.*;
 
 public class BukkitPlugin extends BukkitPluginBase implements ServerListPlusPlugin {
     private ServerListPlusCore core;
@@ -85,8 +72,6 @@ public class BukkitPlugin extends BukkitPluginBase implements ServerListPlusPlug
     private StatusHandler bukkit, protocol;
     private boolean paper;
     private Listener loginListener, disconnectListener;
-
-    private MetricsLite metrics;
 
     private Method legacy_getOnlinePlayers;
 
@@ -106,11 +91,11 @@ public class BukkitPlugin extends BukkitPluginBase implements ServerListPlusPlug
     // Request cache
     private final CacheLoader<InetSocketAddress, StatusRequest> requestLoader =
             new CacheLoader<InetSocketAddress, StatusRequest>() {
-        @Override
-        public StatusRequest load(InetSocketAddress client) throws Exception {
-            return core.createRequest(client.getAddress());
-        }
-    };
+                @Override
+                public StatusRequest load(InetSocketAddress client) throws Exception {
+                    return core.createRequest(client.getAddress());
+                }
+            };
 
     private LoadingCache<InetSocketAddress, StatusRequest> requestCache;
     private String requestCacheConf;
@@ -125,7 +110,8 @@ public class BukkitPlugin extends BukkitPluginBase implements ServerListPlusPlug
             Method method = Server.class.getMethod("getOnlinePlayers");
             if (method.getReturnType() == Player[].class)
                 legacy_getOnlinePlayers = method;
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
 
         try {
             Class.forName("com.destroystokyo.paper.event.server.PaperServerListPingEvent");
@@ -150,10 +136,12 @@ public class BukkitPlugin extends BukkitPluginBase implements ServerListPlusPlug
             getLogger().log(INFO, "Successfully loaded!");
         } catch (ServerListPlusException e) {
             getLogger().log(INFO, "Please fix the error before restarting the server!");
-            disablePlugin(); return; // Disable bukkit to show error in /plugins
+            disablePlugin();
+            return; // Disable bukkit to show error in /plugins
         } catch (Exception e) {
             getLogger().log(ERROR, "An internal error occurred while loading the core!", e);
-            disablePlugin(); return; // Disable bukkit to show error in /plugins
+            disablePlugin();
+            return; // Disable bukkit to show error in /plugins
         }
 
         // Register commands
@@ -176,7 +164,8 @@ public class BukkitPlugin extends BukkitPluginBase implements ServerListPlusPlug
     public void onDisable() {
         try {
             core.stop();
-        } catch (ServerListPlusException ignored) {}
+        } catch (ServerListPlusException ignored) {
+        }
         getLogger().info(getDisplayName() + " disabled.");
         // BungeeCord closes the log handlers automatically, but Bukkit does not
         for (Handler handler : getLogger().getHandlers())
@@ -185,11 +174,13 @@ public class BukkitPlugin extends BukkitPluginBase implements ServerListPlusPlug
 
     // Commands
     public final class ServerListPlusCommand implements TabExecutor {
-        private ServerListPlusCommand() {}
+        private ServerListPlusCommand() {
+        }
 
         @Override
         public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-            core.executeCommand(new BukkitCommandSender(sender), cmd.getName(), args); return true;
+            core.executeCommand(new BukkitCommandSender(sender), cmd.getName(), args);
+            return true;
         }
 
         @Override
@@ -200,20 +191,25 @@ public class BukkitPlugin extends BukkitPluginBase implements ServerListPlusPlug
 
     // Player tracking
     public final class LoginListener implements Listener {
-        private LoginListener() {}
+        private LoginListener() {
+        }
 
         @EventHandler
         public void onPlayerLogin(AsyncPlayerPreLoginEvent event) {
             if (core == null) return; // Too early, we haven't finished initializing yet
 
             UUID uuid = null;
-            try { uuid = event.getUniqueId(); } catch (NoSuchMethodError ignored) {}
+            try {
+                uuid = event.getUniqueId();
+            } catch (NoSuchMethodError ignored) {
+            }
             core.updateClient(event.getAddress(), uuid, event.getName());
         }
     }
 
     public final class OfflineModeLoginListener implements Listener {
-        private OfflineModeLoginListener() {}
+        private OfflineModeLoginListener() {
+        }
 
         @EventHandler
         public void onPlayerLogin(PlayerLoginEvent event) {
@@ -222,20 +218,25 @@ public class BukkitPlugin extends BukkitPluginBase implements ServerListPlusPlug
             UUID uuid = null;
             try {
                 uuid = event.getPlayer().getUniqueId();
-            } catch (NoSuchMethodError ignored) {}
+            } catch (NoSuchMethodError ignored) {
+            }
             core.updateClient(event.getAddress(), uuid, event.getPlayer().getName());
         }
     }
 
     public final class DisconnectListener implements Listener {
-        private DisconnectListener() {}
+        private DisconnectListener() {
+        }
 
         @EventHandler
         public void onPlayerDisconnect(PlayerQuitEvent event) {
             if (core == null) return; // Too early, we haven't finished initializing yet
 
             UUID uuid = null;
-            try { uuid = event.getPlayer().getUniqueId(); } catch (NoSuchMethodError ignored) {}
+            try {
+                uuid = event.getPlayer().getUniqueId();
+            } catch (NoSuchMethodError ignored) {
+            }
             core.updateClient(event.getPlayer().getAddress().getAddress(), uuid, event.getPlayer().getName());
         }
     }
@@ -437,23 +438,6 @@ public class BukkitPlugin extends BukkitPluginBase implements ServerListPlusPlug
                 getLogger().log(DEBUG, "Unregistered player disconnect listener.");
             }
         }
-
-        // Plugin statistics
-        if (confs.get(PluginConf.class).Stats) {
-            if (metrics == null)
-                try {
-                    this.metrics = new MetricsLite(this);
-                    metrics.start();
-                } catch (Throwable e) {
-                    getLogger().log(DEBUG, "Failed to enable plugin statistics: " + Helper.causedException(e));
-                }
-        } else if (metrics != null)
-            try {
-                metrics.disable();
-                this.metrics = null;
-            } catch (Throwable e) {
-                getLogger().log(DEBUG, "Failed to disable plugin statistics: " + Helper.causedException(e));
-            }
     }
 
     @Override

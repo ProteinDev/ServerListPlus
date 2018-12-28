@@ -40,8 +40,6 @@ dependencies {
 
     compileOnly("me.confuser:BanManager:5.15.0") { isTransitive = false }
     compileOnly("com.github.netherfoam:MaxBans:156239e1f1") { isTransitive = false }
-
-    compile("org.mcstats.bukkit:metrics-lite:R8-SNAPSHOT") { isTransitive = false }
 }
 
 bukkit {
@@ -67,13 +65,6 @@ bukkit {
 }
 
 tasks {
-    withType<ShadowJar> {
-        dependencies {
-            include(dependency("org.mcstats.bukkit:metrics-lite"))
-        }
-
-        relocate("org.mcstats", "net.minecrell.serverlistplus.bukkit.mcstats")
-    }
 
     // Remapped artifacts for compatibility with 1.7.x and 1.8
     fun createShadowTask(name: String, configure: ShadowJar.() -> Unit) {

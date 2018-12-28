@@ -18,21 +18,9 @@
 
 package net.minecrell.serverlistplus.bungee;
 
-import static net.minecrell.serverlistplus.core.logging.Logger.DEBUG;
-import static net.minecrell.serverlistplus.core.logging.Logger.ERROR;
-import static net.minecrell.serverlistplus.core.logging.Logger.INFO;
-
 import com.google.common.base.Optional;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheBuilderSpec;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import net.md_5.bungee.api.AbstractReconnectHandler;
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.CommandSender;
-import net.md_5.bungee.api.Favicon;
-import net.md_5.bungee.api.ServerPing;
+import com.google.common.cache.*;
+import net.md_5.bungee.api.*;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.PendingConnection;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
@@ -44,7 +32,6 @@ import net.md_5.bungee.api.plugin.Command;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.TabExecutor;
 import net.md_5.bungee.event.EventHandler;
-import net.minecrell.mcstats.BungeeStatsLite;
 import net.minecrell.serverlistplus.bungee.integration.BungeeBanBanProvider;
 import net.minecrell.serverlistplus.core.ServerListPlusCore;
 import net.minecrell.serverlistplus.core.ServerListPlusException;
@@ -74,23 +61,23 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static net.minecrell.serverlistplus.core.logging.Logger.*;
+
 public class BungeePlugin extends BungeePluginBase implements ServerListPlusPlugin {
     private ServerListPlusCore core;
     private Listener connectionListener, pingListener;
 
-    private BungeeStatsLite stats = new BungeeStatsLite(this);
-
     // Favicon cache
     private final CacheLoader<FaviconSource, Optional<Favicon>> faviconLoader =
             new CacheLoader<FaviconSource, Optional<Favicon>>() {
-        @Override
-        public Optional<Favicon> load(FaviconSource source) throws Exception {
-            // Try loading the favicon
-            BufferedImage image = FaviconHelper.loadSafely(core, source);
-            if (image == null) return Optional.absent(); // Favicon loading failed
-            else return Optional.of(Favicon.create(image)); // Success!
-        }
-    };
+                @Override
+                public Optional<Favicon> load(FaviconSource source) {
+                    // Try loading the favicon
+                    BufferedImage image = FaviconHelper.loadSafely(core, source);
+                    if (image == null) return Optional.absent(); // Favicon loading failed
+                    else return Optional.of(Favicon.create(image)); // Success!
+                }
+            };
     private LoadingCache<FaviconSource, Optional<Favicon>> faviconCache;
 
     private boolean isPluginLoaded(String pluginName) {
@@ -103,7 +90,8 @@ public class BungeePlugin extends BungeePluginBase implements ServerListPlusPlug
             this.core = new ServerListPlusCore(this);
             getLogger().log(INFO, "Successfully loaded!");
         } catch (ServerListPlusException e) {
-            getLogger().log(INFO, "Please fix the error before restarting the server!"); return;
+            getLogger().log(INFO, "Please fix the error before restarting the server!");
+            return;
         } catch (Exception e) {
             getLogger().log(ERROR, "An internal error occurred while loading the core.", e);
             return;
@@ -125,7 +113,8 @@ public class BungeePlugin extends BungeePluginBase implements ServerListPlusPlug
     public void onDisable() {
         try {
             core.stop();
-        } catch (ServerListPlusException ignored) {}
+        } catch (ServerListPlusException ignored) {
+        }
     }
 
     // Commands
@@ -148,7 +137,8 @@ public class BungeePlugin extends BungeePluginBase implements ServerListPlusPlug
 
     // Player tracking
     public final class ConnectionListener implements Listener {
-        private ConnectionListener() {}
+        private ConnectionListener() {
+        }
 
         @EventHandler
         public void onPlayerLogin(LoginEvent event) {
@@ -168,7 +158,8 @@ public class BungeePlugin extends BungeePluginBase implements ServerListPlusPlug
 
     // Status listener
     public final class PingListener implements Listener {
-        private PingListener() {}
+        private PingListener() {
+        }
 
         @EventHandler
         public void onProxyPing(ProxyPingEvent event) {
@@ -249,7 +240,7 @@ public class BungeePlugin extends BungeePluginBase implements ServerListPlusPlug
                             players.setSample(sample);
                         } else
                             players.setSample(new ServerPing.PlayerInfo[]{
-                                    new ServerPing.PlayerInfo(message, StatusManager.EMPTY_UUID) });
+                                    new ServerPing.PlayerInfo(message, StatusManager.EMPTY_UUID)});
                     }
                 }
             }
@@ -257,13 +248,8 @@ public class BungeePlugin extends BungeePluginBase implements ServerListPlusPlug
             // Favicon
             FaviconSource favicon = response.getFavicon();
             if (favicon != null) {
-                Optional<Favicon> icon;
+                Optional<Favicon> icon = event instanceof AsyncEvent ? faviconCache.getIfPresent(favicon) : faviconCache.getUnchecked(favicon);
                 // Check if instanceof AsyncEvent for compatibility with 1.7.10
-                if (event instanceof AsyncEvent) {
-                    icon = faviconCache.getIfPresent(favicon);
-                } else {
-                    icon = faviconCache.getUnchecked(favicon);
-                }
 
                 if (icon == null) {
                     // Load favicon asynchronously
@@ -406,13 +392,6 @@ public class BungeePlugin extends BungeePluginBase implements ServerListPlusPlug
             unregisterListener(connectionListener);
             this.connectionListener = null;
             getLogger().log(DEBUG, "Unregistered proxy player tracking listener.");
-        }
-
-        // Plugin statistics
-        if (confs.get(PluginConf.class).Stats) {
-            this.stats.start();
-        } else {
-            this.stats.stop();
         }
     }
 
